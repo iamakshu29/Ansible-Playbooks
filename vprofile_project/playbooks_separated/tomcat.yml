@@ -1,0 +1,70 @@
+---
+- name: Tomcat Setup
+  hosts: web_tomcat
+  become: yes
+
+  vars:
+    tomcat_version: 10.1.26
+
+  tasks: 
+  - name: Update and upgrade apt services
+    ansible.builtin.apt:
+      upgrade: dist
+      update_cache: yes
+
+  - name: Install OpenJDK 17 JDK
+    ansible.builtin.apt:
+     name: 
+       - openjdk-17-jdk
+       - git
+       - wget
+     state: present
+
+  - name: Create a directory for the unarchieved file to get placed, if it doesn't exist
+    ansible.builtin.file:
+      path: /tmp/apache-tomcat-{{tomcat_version}}
+      state: directory
+      mode: '0755'
+
+  - name: Unarchive a file that needs to be downloaded
+    ansible.builtin.unarchive:
+      src: https://archive.apache.org/dist/tomcat/tomcat-10/v{{tomcat_version}}/bin/apache-tomcat-{{tomcat_version}}.tar.gz
+      dest: /tmp/apache-tomcat-{{tomcat_version}}
+      remote_src: yes
+
+  - name: Creating a group "tomcat"
+    ansible.builtin.group:
+      name: tomcat
+      state: present
+
+  - name: Creating a user "tomcat" and assigned a group "tomcat" and creating its  home directory
+    ansible.builtin.user:
+      name: tomcat
+      group: tomcat
+      create_home: yes
+      home: /usr/local/tomcat
+
+  - name: Copying data to user's home directory
+    ansible.builtin.shell : cp -r /tmp/apache-tomcat-{{tomcat_version}}/* /usr/local/tomcat/
+
+  - name: Change file ownership, group and permissions
+    ansible.builtin.file:
+      path: /usr/local/tomcat
+      owner: tomcat
+      group: tomcat
+      mode: '0755'
+
+  - name: Copy the systemd service file content to start and enable the tomcat service
+    ansible.builtin.copy:
+      src: ./template/tomcat.j2
+      dest: /etc/systemd/system/tomcat.service
+   
+  - name: Reload systemd daemon
+    ansible.builtin.systemd_service:
+      daemon_reload: true
+
+  - name: Enable Tomcat service
+    ansible.builtin.service:
+      name: tomcat
+      enabled: yes
+      state: started

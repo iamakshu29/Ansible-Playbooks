@@ -1,0 +1,5 @@
+---
+- name: Provisioning servers
+  hosts: all
+  roles:
+    - post-install

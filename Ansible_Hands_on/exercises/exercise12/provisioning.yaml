@@ -1,0 +1,72 @@
+---
+- name: Provisioning servers
+  hosts: all
+  vars:
+    services:
+      - ntp
+      - apache2
+      - wget
+      - git
+      - zip
+      - unzip
+  vars_files:
+    - conf_vars
+
+  tasks:
+    - name: Install NTP agents on centos
+      ansible.builtin.yum:
+        name: " {{item}} "
+        state: present
+      when: ansible_distribution == "Fedora"
+      loop:
+        - chrony
+        - wget
+        - git
+        - zip
+        - unzip
+
+    - name: Isntall NTP on Ubuntu
+      ansible.builtin.apt:
+        name: " {{item}} "
+        state: present
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+      loop: "{{services}}"
+
+    - name: Banner Content
+      copy:
+        content: "# This machines are handled by Ansible. Don't modify anything manually"
+        dest: /etc/motd
+
+    - name: Copying the Confi ntp Files using template module
+      template:
+        src: templates/ntp_conf
+        dest: /etc/chrony.cnf
+        backup: yes
+      when: ansible_distribution == "Fedora"
+
+    - name: COpy the ntp config file using template module
+      template:
+        src: templates/chrony_conf
+        dest: /etc/ntpsec/ntp.conf
+        backup: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: reStart Service on Centos
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+        enabled: yes
+      when: ansible_distribution == "Fedora"
+
+    - name: reStart Service on Ubuntu
+      ansible.builtin.service:
+        name: ntp
+        state: restarted
+        enabled: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Create a folder
+      file:
+        path: /etc/test21
+        state: directory

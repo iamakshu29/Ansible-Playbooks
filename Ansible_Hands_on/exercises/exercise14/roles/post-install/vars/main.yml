@@ -1,0 +1,16 @@
+---
+# vars file for post-install
+USRNM: commonuser
+COMM: variable from group_vars file
+server0: 0.in.pool.ntp.org
+server1: 1.in.pool.ntp.org
+server2: 2.in.pool.ntp.org
+server3: 3.in.pool.ntp.org
+dir: /etc/test22
+services:
+ - ntp
+ - apache2
+ - wget
+ - git
+ - zip
+ - unzip

@@ -1,0 +1,54 @@
+---
+# tasks file for post-install
+- name: Install NTP agents on centos
+  ansible.builtin.yum:
+    name: " {{item}} "
+    state: present
+  when: ansible_distribution == "Fedora"
+  loop:
+    - chrony
+    - wget
+    - git
+    - zip
+    - unzip
+
+- name: Install NTP on Ubuntu
+  ansible.builtin.apt:
+    name: "{{item}}"
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Ubuntu"
+  loop: "{{services}}"
+
+- name: Banner Content
+  copy:
+    content: "# This machines are handled by Ansible. Don't modify anything manually"
+    dest: /etc/motd
+
+- name: Create a folder
+  file:
+    path: " {{dir}} "
+    state: directory
+
+- name: Copying a file
+  ansible.builtin.copy:
+    src: myfile.txt
+    dest: /tmp/myfile.txt
+
+- name: Copying the Confi ntp Files using template module
+  template:
+    src: ntp_conf.j2
+    dest: /etc/chrony.cnf
+    backup: yes
+  when: ansible_distribution == "Fedora"
+  notify:
+    - restart service on Ubuntu
+
+- name: Copy the ntp config file using template module
+  template:
+    src: chrony_conf.j2
+    dest: /etc/ntpsec/ntp.conf
+    backup: yes
+  when: ansible_distribution == "Ubuntu"
+  notify:
+    - restart service on CentOS

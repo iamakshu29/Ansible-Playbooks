@@ -1,0 +1,50 @@
+---
+# tasks file for rabbitmq
+- name: Update OS with latest package " apt update and apt upgrade"
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+    
+- name: Install wget
+  ansible.builtin.apt:
+    name: wget
+    state: present
+
+- name: Install RabbitMQ server
+  ansible.builtin.apt:
+    name: rabbitmq-server
+    state: present
+
+- name: Enable and start RabbitMQ service
+  ansible.builtin.service:
+    name: rabbitmq-server
+    state: started
+    enabled: yes
+
+- name: Configure loopback_users to allow non-local connections
+  ansible.builtin.copy:
+    content: '[{rabbit, [{loopback_users, []}]}].'
+    dest: /etc/rabbitmq/rabbitmq.config
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart RabbitMQ
+
+- name: Check if RabbitMQ user 'test' exists
+  ansible.builtin.command: rabbitmqctl list_users
+  register: list_users_result
+  changed_when: false
+
+- name: Add RabbitMQ user 'test' if not exists
+  ansible.builtin.command: rabbitmqctl add_user test test
+  when: "'test' not in list_users_result.stdout"
+  register: add_user_result
+  failed_when: add_user_result.rc != 0 and 'already_exists' not in add_user_result.stderr
+
+- name: Set 'test' user as administrator
+  ansible.builtin.command: rabbitmqctl set_user_tags test administrator
+
+- name: Set permissions for 'test' user
+  ansible.builtin.command: rabbitmqctl set_permissions -p / test ".*" ".*" ".*"
+  when: "'test' not in list_users_result.stdout"

@@ -1,0 +1,9 @@
+upstream vproapp {
+	server 172.31.91.96:8080;
+}
+server {
+	listen 80;
+location / {
+	proxy_pass http://vproapp;
+}
+}

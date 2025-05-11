@@ -1,0 +1,118 @@
+---
+# tasks file for tomcat
+- name: Update and upgrade apt services
+  ansible.builtin.apt:
+    # update_cache: yes
+      #  upgrade: dist
+
+- name: Install OpenJDK 17 JDK
+  ansible.builtin.apt:
+    name: 
+      - openjdk-17-jdk
+      - git
+      - wget
+      - unzip
+    state: present
+
+- name: Create a directory for the unarchieved file to get placed, if it doesn't exist
+  ansible.builtin.file:
+    path: /tmp/apache-tomcat-{{tomcat_version}}
+    state: directory
+    mode: '0755'
+
+- name: Unarchive a file that needs to be downloaded
+  ansible.builtin.unarchive:
+    src: https://archive.apache.org/dist/tomcat/tomcat-10/v{{tomcat_version}}/bin/apache-tomcat-{{tomcat_version}}.tar.gz
+    dest: /tmp/apache-tomcat-{{tomcat_version}}
+    remote_src: yes
+
+- name: Creating a group "tomcat"
+  ansible.builtin.group:
+    name: tomcat
+    state: present
+
+- name: Creating a user "tomcat" and assigned a group "tomcat" and creating its  home directory
+  ansible.builtin.user:
+    name: tomcat
+    group: tomcat
+    create_home: yes
+    home: /usr/local/tomcat
+
+- name: Copying data to user's home directory
+  ansible.builtin.shell : cp -r /tmp/apache-tomcat-{{tomcat_version}}/apache-tomcat-{{tomcat_version}}/* /usr/local/tomcat/
+
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /usr/local/tomcat
+    owner: tomcat
+    group: tomcat
+    mode: '0755'
+
+- name: Copy the systemd service file content to start and enable the tomcat service
+  ansible.builtin.copy:
+    src: tomcat
+    dest: /etc/systemd/system/tomcat.service
+ 
+- name: Reload systemd daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Enable Tomcat service
+  ansible.builtin.service:
+    name: tomcat
+    enabled: yes
+    state: started
+
+- name: Download maven 3.9.9 and extract it
+  ansible.builtin.unarchive:
+    src: https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip
+    dest: /tmp/
+    remote_src: yes
+
+- name: Move the main to maven path
+  ansible.builtin.command: mv /tmp/apache-maven-3.9.9 /usr/local/maven3.9
+  args:
+    creates: /usr/local/maven3.9
+
+- name: Example clone of a single branch
+  ansible.builtin.git:
+    repo: https://github.com/hkhcoder/vprofile-project.git
+    dest: /tmp/vprofile-project
+    single_branch: yes
+    version: local
+
+- name: Run maven install command in vprofile-project repository
+  ansible.builtin.command:
+    chdir: /tmp/vprofile-project
+    cmd: "/usr/local/maven3.9/bin/mvn install"
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+    MAVEN_OPTS: "-Xmx512m"
+
+- name: Stop service tomcat, if started
+  ansible.builtin.service:
+    name: tomcat
+    state: stopped
+
+- name: Remove the default website and copy vprofile-website
+  ansible.builtin.shell: |
+    rm -rf /usr/local/tomcat/webapps/ROOT
+    cp /tmp/vprofile-project/target/vprofile-v2.war /usr/local/tomcat/webapps/ROOT.war
+
+- name: Enable Tomcat service
+  ansible.builtin.service:
+    name: tomcat
+    state: started
+
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /usr/local/tomcat/webapps/
+    state: directory
+    recurse: yes
+    owner: tomcat
+    group: tomcat
+
+- name: Restart service httpd, in all cases
+  ansible.builtin.service:
+    name: tomcat
+    state: restarted

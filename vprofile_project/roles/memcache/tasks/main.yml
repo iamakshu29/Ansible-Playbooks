@@ -1,0 +1,24 @@
+---
+# tasks file for memcache
+- name: Update OS with latest patches "apt update and apt upgrade"
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: yes
+
+- name: Install memcached service
+  ansible.builtin.apt:
+    name: memcached
+    state: present
+
+- name: Start and Enable memcached service
+  ansible.builtin.service:
+    name: memcached
+    state: started
+    enabled: yes
+
+- name: Chnage memecache config file
+  ansible.builtin.template:
+    src: memcache.j2
+    dest: /etc/memcached.conf
+  notify:
+    - Restart memcached service

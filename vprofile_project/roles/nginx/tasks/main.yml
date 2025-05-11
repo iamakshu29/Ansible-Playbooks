@@ -1,0 +1,35 @@
+---
+# tasks file for nginx
+- name: Update OS with latest package " apt update and apt upgrade"
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Start and Enable service httpd
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Create an nginx configuration file
+  ansible.builtin.copy:
+    src: nginx
+    dest: /etc/nginx/sites-available/vproapp
+ 
+- name: Remove the default nginx conf file
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Add a symbolic link from site-availble to site-enabled
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/vproapp
+    dest: /etc/nginx/sites-enabled/vproapp
+    state: link
+  notify:
+    - Restart nginx service

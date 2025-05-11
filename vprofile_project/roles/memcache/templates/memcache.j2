@@ -1,0 +1,17 @@
+# memcached.j2
+
+# memory to use (in MB)
+-m {{ memcached_memory | default(64) }}
+
+# default port
+-p {{ memcached_port | default(11211) }}
+
+# user to run as
+-u memcache
+
+# connection limit
+-c {{ connection_limit | default(1024) }}
+
+# listen IP address (default is localhost only)
+-l {{ listen_ip | default('0.0.0.0') }}
+

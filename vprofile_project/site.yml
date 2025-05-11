@@ -1,0 +1,19 @@
+- hosts: _tomcat_instance
+  roles:
+    - tomcat
+
+- hosts: _nginx_instance
+  roles:
+    - nginx
+
+- hosts: _memcache_instance
+  roles:
+    - memcache
+
+- hosts: _rmq_instance
+  roles:
+    - rabbitmq
+
+- hosts: _mysql_instance
+  roles:
+    - mysql

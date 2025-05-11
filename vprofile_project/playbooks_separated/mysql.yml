@@ -1,0 +1,98 @@
+---
+- name: MySQL Setup
+  hosts: web_mysql
+  become: yes
+
+  tasks:
+    - name: Update and upgrade apt services
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: yes
+
+    - name: Install git service
+      ansible.builtin.apt:
+        name: git
+        state: present
+
+    - name: Install maria-db service
+      ansible.builtin.apt:
+        name: mariadb-server
+        state: present
+
+    - name: Ensure python3-pip is installed
+      ansible.builtin.apt:
+        name: python3-pip
+        state: present
+
+    - name: Install pymysql
+      ansible.builtin.pip:
+        name: PyMySQL
+        executable: pip3
+        extra_args: --break-system-packages
+        state: present
+
+    - name: Start and enable mariadb service
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Create a new database with name 'accounts'
+      community.mysql.mysql_db:
+        name: accounts
+        state: present
+        login_user: root
+        login_password: admin@123
+        login_unix_socket: /run/mysqld/mysqld.sock
+
+    - name: Create database user with name 'root' and password 'admin@123' with all database privileges in 'accounts' database
+      community.mysql.mysql_user:
+        name: root
+        password: admin@123
+        priv: '*.*:ALL,GRANT'
+        login_user: root
+        login_password: admin@123
+        login_unix_socket: /run/mysqld/mysqld.sock
+        state: present
+
+    - name: Clone a single repo present in local branch
+      ansible.builtin.git:
+        repo: 'https://github.com/hkhcoder/vprofile-project.git'
+        dest: /temp/vprofile-project/
+        single_branch: yes
+        version: local
+
+    - name: Check if the database exists
+      community.mysql.mysql_db:
+        name: accounts
+        state: import
+        login_user: root
+        login_password: admin@123
+      when: db_check is defined and db_check.rc == 0
+      register: db_check 
+
+    - name: Print the registered variable db_check
+      ansible.builtin.debug:
+        var: db_check
+
+    - name: Import the sql file in database IF NOT EXIST  like mysql -u <usrname> -p <pswd> <dbname> < <sql_file_path>
+      community.mysql.mysql_db:
+        state: import
+        name: accounts
+        encoding: latin1
+        target: /temp/vprofile-project/src/main/resources/db_backup.sql
+        login_user: root
+        login_password: admin@123
+      when: db_check.query is not defined or db_check.query | length == 0
+      notify: Restart mariadb service
+
+    - name: Print the registered variable db_check
+      ansible.builtin.debug:
+        var: db_check.query
+
+  handlers:         
+    - name: Restart mariadb service
+      ansible.builtin.service:
+        name: mariadb
+        state: restarted
+

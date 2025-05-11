@@ -1,0 +1,24 @@
+# inventory_aws_ec2.yml
+
+plugin: aws_ec2
+regions:
+  - us-east-1
+filters:
+  tag:Type: target
+  tag:Name:
+    - mysql_instance
+    - rmq_instance
+    - nginx_instance
+    - memcache_instance
+    - tomcat_instance
+hostnames:
+  - private-ip-address
+compose:
+  ansible_host: private_ip_address
+  ansible_user: ubuntu
+keyed_groups:
+  - key: tags.Type
+    prefix: type
+  - key: tags.Name
+        # if not prefix then it bydefault add "_" as prefix, like _rmq_instance
+

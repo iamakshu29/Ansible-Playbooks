@@ -1,0 +1,7 @@
+- name: Test Web Servers
+  hosts: type_target
+  become: true
+  tasks:
+    - name: Ping test
+      ansible.builtin.ping:
+
